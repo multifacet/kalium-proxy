@@ -12,6 +12,7 @@ import (
 	//"gvisor.dev/gvisor/pkg/log"
 	//"gvisor.dev/gvisor/runsc/specutils"
 	//"net/http"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -63,6 +64,8 @@ type Guard struct {
 	sandboxSide int
 	// Seclambda2sandbox FD
 	seclambdaSide int
+	// Function name
+	funcName string
 }
 
 type Policy struct {
@@ -83,6 +86,7 @@ type KernMsg struct {
 	Data      []byte
 	IsExit    bool
 	MsgID     int64
+	FuncName  string
 }
 
 type ReturnMsg struct {
@@ -90,12 +94,13 @@ type ReturnMsg struct {
 	MsgID   int64
 }
 
+/*
 func get_func_name() string {
 	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") == "" {
 		return string("test0")
 	}
 	return os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
-}
+}*/
 
 func get_region_name() string {
 	if os.Getenv("AWS_REGION") == "" {
@@ -105,7 +110,7 @@ func get_region_name() string {
 }
 
 func get_inst_id() []byte {
-	return []byte("instid0")
+	return []byte("sandbox-ab6a0e")
 }
 
 func split_str(s, sep string) []string {
@@ -145,7 +150,7 @@ func (g *Guard) get_event_id(event_hash int64) (int, bool) {
 	return id, present
 }
 
-func New(ctrIP string, ctrPort int, sandboxSide int, seclambdaSide int) Guard {
+func New(ctrIP string, ctrPort int, sandboxSide int, seclambdaSide int, hostname string) Guard {
 	var g Guard
 	g.startTime = get_time()
 	g.requestNo = 0
@@ -161,6 +166,13 @@ func New(ctrIP string, ctrPort int, sandboxSide int, seclambdaSide int) Guard {
 	g.policyTable = make(map[string]*ListNode)
 	g.sandboxSide = sandboxSide
 	g.seclambdaSide = seclambdaSide
+
+	if hostname != "" {
+		n := strings.Split(hostname, "-")
+		g.funcName = strings.Join(n[:len(n)-2], "-")
+	} else {
+		g.funcName = ""
+	}
 
 	return g
 }
@@ -201,11 +213,14 @@ func (g *Guard) PolicyInitHandler(msg []byte) {
 	var f Policy
 	err := json.Unmarshal(msg, &f)
 	if err != nil {
-		//log.Infof("[Guard] Error parsing json: %v", msg)
+		log.Println("[Guard] Error parsing json: %v", msg)
 		return
 	}
+
 	g.ior = int(f.IOR)
 	g.netr = int(f.NETR)
+
+	log.Println("[Seclambda] Here 1")
 	for i := 0; i < len(f.IO); i++ {
 		g.ioWhitelist[f.IO[i]] = 1
 	}
@@ -218,11 +233,13 @@ func (g *Guard) PolicyInitHandler(msg []byte) {
 		g.urlWhitelist[f.URL[i]] = 1
 	}
 
+	log.Println("[Seclambda] Here 2")
+
 	func_name := f.GRAPH["NAME"].(string)
 	eventid := f.GRAPH["EVENTID"].([]interface{})
 	//log.Infof("[Guard] The eventid map : %v", eventid)
 	var eventid_map []map[string]int
-
+	log.Println("[Seclambda] Here 3")
 	for _, v := range eventid {
 		switch vv := v.(type) {
 		case map[string]interface{}:
@@ -234,15 +251,17 @@ func (g *Guard) PolicyInitHandler(msg []byte) {
 		}
 	}
 
+	log.Println("[Seclambda] Here 4")
 	for _, m := range eventid_map {
 		h := int64(m["h"])
 		k := m["e"]
 		g.eventMap[h] = k
 	}
-
+	log.Println("[Seclambda] Here 5")
 	g.graph = ListInit()
 	var ns_map []map[string]int
-	ns := f.GRAPH["ns"].([]interface{})
+	ns := f.GRAPH["NS"].([]interface{})
+	log.Println("[Seclambda] Here 5 1")
 	for _, v := range ns {
 		switch vv := v.(type) {
 		case map[string]interface{}:
@@ -256,7 +275,7 @@ func (g *Guard) PolicyInitHandler(msg []byte) {
 			ns_map = append(ns_map, m)
 		}
 	}
-
+	log.Println("[Seclambda] Here 6")
 	for _, m := range ns_map {
 		var tnode Node
 		tnode.id = int(m["id"])
@@ -264,8 +283,8 @@ func (g *Guard) PolicyInitHandler(msg []byte) {
 		tnode.loop_cnt = int(m["cnt"])
 		g.graph.Append(&tnode)
 	}
-
-	es := f.GRAPH["es"].([]interface{})
+	log.Println("[Seclambda] Here 7")
+	es := f.GRAPH["ES"].([]interface{})
 	for _, v := range es {
 		switch vv := v.(type) {
 		case map[string]interface{}:
@@ -295,8 +314,10 @@ func (g *Guard) PolicyInitHandler(msg []byte) {
 
 		}
 	}
+	log.Println("[Seclambda] Here 7")
 	g.policyTable[func_name] = g.graph
 	g.curState = g.graph
+	log.Println("[Seclambda] Here 8")
 }
 
 func (g *Guard) PolicyInit() {
@@ -310,9 +331,10 @@ func (g *Guard) PolicyInit() {
 }
 
 func (g *Guard) CheckPolicy(event_id int) bool {
-	fname := get_func_name()
+	fname := g.get_func_name()
 	_, present := g.policyTable[fname]
 	if !present {
+		log.Println("[Seclambda] #1 Returning false for ev_id: %v", event_id)
 		return false
 	}
 
@@ -329,6 +351,7 @@ func (g *Guard) CheckPolicy(event_id int) bool {
 			nptr.ctr = nptr.ctr - 1
 			return true
 		}
+		log.Println("[Seclambda] #2 Returning false for ev_id: %v", event_id)
 		return false
 	}
 
@@ -342,6 +365,7 @@ func (g *Guard) CheckPolicy(event_id int) bool {
 			return true
 		}
 	}
+	log.Println("[Seclambda] #3 Returning false for ev_id: %v", event_id)
 	return false
 }
 
@@ -448,6 +472,10 @@ func handleSandbox(sandboxSide int, ch chan KernMsg) {
 	}
 }
 
+func (g *Guard) get_func_name() string {
+	return g.funcName
+}
+
 func (g *Guard) Run(wg *sync.WaitGroup) {
 	// Connect to the controller
 	/*
@@ -476,8 +504,9 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 		}
 	*/
 	// TODO: Need to find how to get the function name
+	// Get the initial message from the kernel to get the function name
+	// Dirty hack
 
-	id := get_func_name() + strconv.FormatInt(get_time(), 10)
 	ch := make(chan KernMsg)
 	replyFile := os.NewFile(uintptr(g.seclambdaSide), "seclambdaSide")
 	encoder := gob.NewEncoder(replyFile)
@@ -485,10 +514,24 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 	// Create the sandbox handling end
 	go handleSandbox(g.sandboxSide, ch)
 
-	//log.Infof("[Seclambda] Started Guard with id: " + id)
-	fname := get_func_name()
+	msg := <-ch
+	if msg.FuncName != "" {
+		n := strings.Split(msg.FuncName, "-")
+		g.funcName = strings.Join(n[:len(n)-2], "-")
+	}
+
+	id := g.get_func_name() + strconv.FormatInt(get_time(), 10)
+	f, err := os.OpenFile("/mydata/runsc_logs/seclambda."+id, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(f)
+	log.Println("[Seclambda] Started Guard with id: " + id)
+	fname := g.get_func_name()
 	idOpt := zmq.SockSetIdentity(id)
-	//log.Infof("[Seclambda] Attempting to connect to %v at port: %v", g.ctrIP, g.ctrPort)
+	log.Println("[Seclambda] Attempting to connect to %v at port: %v", g.ctrIP, g.ctrPort)
 
 	updater := zmq.NewDealerChanneler("tcp://"+g.ctrIP+":"+strconv.FormatInt(g.ctrPort, 10), idOpt)
 	rid := get_inst_id()
@@ -504,7 +547,7 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 
 	//log.Infof("[Seclambda] Started Guard with id: " + id)
 	keyInitMsg := MsgInit([]byte(id))
-	//log.Infof("Sending message: " + keyInitMsg)
+	log.Println("Sending message: %v", keyInitMsg)
 	updater.SendChan <- [][]byte{keyInitMsg}
 
 	/*
@@ -540,9 +583,12 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 			//log.Infof("[Seclambda] The message struct : %v", msg)
 			if msg.IsExit {
 				// Kill the go routine on kernel exit message
-				//log.Infof("[Seclambda] Exiting the go-routine")
+				log.Println("[Seclambda] Exiting the go-routine")
 				break
 			}
+
+			//n := strings.Split(msg.FuncName, "-")
+			//fname = strings.Join(n[:len(n)-2], "-")
 			g.requestNo += 1
 			replied := false
 			/*
@@ -565,14 +611,15 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 			//log.Infof("[Seclambda] Out string: %s", out)
 
 			info := strings.Split(meta, ":")
-			//log.Infof("[Seclambda] info[0]: %v, info[1]: %v", info[0], info[1])
+			//log.Println("[Seclambda] info[0]: %v, info[1]: %v", info[0], info[1])
 			ev_hash := djb2hash(fname, event, info[0], info[1])
 			ev_id, present := g.get_event_id(int64(ev_hash))
+			log.Println("[Seclambda] info[0]: %v, info[1]: %v ev_id: %v, present: %v, msgID: %v", info[0], info[1], ev_id, present, msg.MsgID)
 			if event == "GETE" {
-				SendToCtr(updater, TYPE_CHECK_EVENT, ACTION_NOOP, []byte(out))
 				// TODO: Change this to a seclambdaFD comm
 				encoder.Encode(ReturnMsg{Allowed: true, MsgID: msg.MsgID})
 				//msg.RecvChan <- 1
+				SendToCtr(updater, TYPE_CHECK_EVENT, ACTION_NOOP, []byte(out))
 				replied = true
 			} else if event == "ENDE" {
 				g.PolicyInit()
@@ -615,16 +662,19 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 			_, err := strconv.ParseInt(string(msg.header.length[:MAX_LEN_SIZE]), 16, 64)
 			if err != nil {
 				//log.Infof("[Seclambda] failed to parse message length: %s", string(msg.header.length[:]))
+				continue
 			}
 			switch typ {
 			case TYPE_KEY_DIST:
 				keyInitHandler(msg.body)
-				//log.Infof("[Seclambda] Registered Keys: " + fname)
+				log.Println("[Seclambda] Registered Keys: " + fname)
 				SendToCtr(updater, TYPE_POLICY, ACTION_POLICY_INIT, []byte(fname))
 			case TYPE_POLICY:
 				if action == ACTION_POLICY_ADD {
+					log.Println("[Seclambda] Before PolicyInitHandler")
+					log.Println("[Seclambda] Printing Policy: %v", string(msg.body))
 					g.PolicyInitHandler(msg.body)
-					//log.Infof("[Seclambda] Finish registration; get policy")
+					log.Println("[Seclambda] Finish registration; get policy")
 					//ctr <- 1
 				}
 			case TYPE_CHECK_RESP:

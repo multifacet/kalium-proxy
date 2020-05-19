@@ -30,9 +30,10 @@ import (
 )
 
 type Seclambda struct {
-	ctrAddr string
-	ctrPort int
-	ioFDs   intFlags
+	ctrAddr  string
+	ctrPort  int
+	ioFDs    intFlags
+	hostName string
 }
 
 // Name implements subcommands.Command.
@@ -85,6 +86,7 @@ func (g *Seclambda) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&g.ctrAddr, "address", "", "Address of the seclambda controller")
 	f.IntVar(&g.ctrPort, "port", 5000, "Seclambda controller port")
 	f.Var(&g.ioFDs, "io-fds", "First FD delivers messages from the sandbox, the second for talking to the sandbox from Seclambda")
+	f.StringVar(&g.hostName, "hostname", "test0", "the container name which is sent to the guard")
 }
 
 // Execute implements subcommands.Command.
@@ -100,7 +102,7 @@ func (g *Seclambda) Execute(_ context.Context, f *flag.FlagSet, args ...interfac
 			log.Debugf("[Seclambda] #1 Response: %v", resp)
 		}*/
 
-	guard := New(g.ctrAddr, g.ctrPort, g.ioFDs[0], g.ioFDs[1])
+	guard := New(g.ctrAddr, g.ctrPort, g.ioFDs[0], g.ioFDs[1], g.hostName)
 
 	wg.Add(1)
 	go guard.Run(&wg)
