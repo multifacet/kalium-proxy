@@ -87,6 +87,7 @@ type KernMsg struct {
 	IsExit    bool
 	MsgID     int64
 	FuncName  string
+	IsFunc    bool
 }
 
 type ReturnMsg struct {
@@ -463,11 +464,15 @@ func handleSandbox(sandboxSide int, ch chan KernMsg) {
 	dec := gob.NewDecoder(sandboxFile)
 	for {
 		var msg KernMsg
-		dec.Decode(&msg)
+		err := dec.Decode(&msg)
+		if err != nil {
+			return
+		}
+
 		ch <- msg
 		if msg.IsExit {
-			// Kill of this go routine if the sandbox is exiting
-			break
+			// Kill off this go routine if the sandbox is exiting
+			return
 		}
 	}
 }
@@ -584,7 +589,12 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 			if msg.IsExit {
 				// Kill the go routine on kernel exit message
 				log.Println("[Seclambda] Exiting the go-routine")
-				break
+				return
+			}
+
+			if msg.IsFunc {
+				log.Println("[Seclambda] New function name; Ignoring")
+				continue
 			}
 
 			//n := strings.Split(msg.FuncName, "-")
