@@ -86,7 +86,7 @@ func (g *Seclambda) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&g.ctrAddr, "address", "", "Address of the seclambda controller")
 	f.IntVar(&g.ctrPort, "port", 5000, "Seclambda controller port")
 	f.Var(&g.ioFDs, "io-fds", "First FD delivers messages from the sandbox, the second for talking to the sandbox from Seclambda")
-	f.StringVar(&g.hostName, "hostname", "test0", "the container name which is sent to the guard")
+	f.StringVar(&g.hostName, "hostname", "test0-asdasd-asdasd", "the container name which is sent to the guard")
 }
 
 // Execute implements subcommands.Command.
