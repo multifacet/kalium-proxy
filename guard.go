@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	zmq "github.com/deepaksirone/goczmq"
@@ -67,6 +68,10 @@ type Guard struct {
 	seclambdaSide int
 	// Function name
 	funcName string
+	// Sandbox File
+	SandboxFile *os.File
+	// Seclambda File
+	SeclambdaFile *os.File
 }
 
 type Policy struct {
@@ -83,12 +88,18 @@ type Policy struct {
 
 type KernMsg struct {
 	EventName [4]byte
-	MetaData  []byte
-	Data      []byte
-	MsgID     int64
-	IsExit    bool
-	FuncName  string
-	IsFunc    bool
+	//MetaData  []byte
+	Url       string
+	Method    string
+	PeerAddr  string
+	PeerPort  int
+	HasBody   int
+	SessionId string
+	//Data      []byte
+	MsgID    int64
+	IsExit   bool
+	FuncName string
+	IsFunc   bool
 }
 
 type ReturnMsg struct {
@@ -389,7 +400,9 @@ func (g *Guard) handleSandbox(dec *gob.Decoder, updater *zmq.Channeler,
 	for {
 		var msg KernMsg
 		//sandboxFile.SetDeadline(time.Now().Add(2 * time.Microsecond))
+		//log.Println("[Seclambda] Decoding message")
 		err := dec.Decode(&msg)
+		//log.Println("[Seclambda] Decoded message")
 		//s := time.Now()
 		//log.Printf("[Seclambda] Timestamp of receiving message with ID: %v : %v", msg.MsgID, s.UnixNano())
 		//if os.IsTimeout(err) {
@@ -397,6 +410,7 @@ func (g *Guard) handleSandbox(dec *gob.Decoder, updater *zmq.Channeler,
 		//}
 
 		if err != nil {
+			log.Println("[Seclambda] Decode Error; ProxyDying: ", err)
 			sandboxExit <- 1
 			return
 		}
@@ -442,18 +456,19 @@ func (g *Guard) handleSandbox(dec *gob.Decoder, updater *zmq.Channeler,
 			continue
 		}
 
-		meta := string(msg.MetaData)
+		//meta := string(msg.MetaData)
+		meta := fmt.Sprintf("%s:%s:%s:%d:%d:%s", msg.Url, msg.Method, msg.PeerAddr, msg.PeerPort, msg.HasBody, msg.SessionId)
 		out := fmt.Sprintf("%s:%s:%s:%s", fname, event, meta, string(rid))
 		//log.Infof("[Seclambda] Out string: %s", out)
 
-		info := strings.Split(meta, ":")
+		//info := strings.Split(meta, ":")
 		//log.Println("[Seclambda] info[0]: %v, info[1]: %v", info[0], info[1])
-		ev_hash := djb2hash(fname, event, info[0], info[1])
+		//ev_hash := djb2hash(fname, event, info[0], info[1])
 		//start1 := time.Now()
-		ev_id, present := g.get_event_id(int64(ev_hash))
+		//ev_id, present := g.get_event_id(int64(ev_hash))
 		//log.Println("[SeclambdaMeasure] Time for event check: %s", time.Since(start1))
 		//log.Println("[Seclambda] info[0]: %v, info[1]: %v ev_id: %v, present: %v, msgID: %v", info[0], info[1], ev_id, present, msg.MsgID)
-		if event == "GETE" {
+		/*if event == "GETE" {
 			// TODO: Change this to a seclambdaFD comm
 			// TODO: Make this synchronous
 			//log.Println("[SeclambdaMeasure] GETE: Time for Aux processing: %s", time.Since(start))
@@ -468,13 +483,13 @@ func (g *Guard) handleSandbox(dec *gob.Decoder, updater *zmq.Channeler,
 			//log.Println("[SeclambdaMeasure] GETE: Time for async controller notif: %s", time.Since(start2))
 			resp := <-checkChannel
 			if resp == 1 {
-				log.Println("[GETE] Sending Allowed")
+				//log.Println("[GETE] Sending Allowed")
 				encoder.Encode(ReturnMsg{Allowed: true, MsgID: msg.MsgID})
 			} else {
-				log.Println("[GETE] Sending disallowed")
+				//log.Println("[GETE] Sending disallowed")
 				encoder.Encode(ReturnMsg{Allowed: false, MsgID: msg.MsgID})
 			}
-		} else if event == "ENDE" {
+		} else */if event == "ENDE" {
 			//log.Println("[SeclambdaMeasure] ENDE: Time for Aux processing: %s", time.Since(start))
 			//start1 := time.Now()
 			g.PolicyInit()
@@ -489,37 +504,38 @@ func (g *Guard) handleSandbox(dec *gob.Decoder, updater *zmq.Channeler,
 			//start3 := time.Now()
 			SendToCtr(updater, TYPE_EVENT, ACTION_NOOP, []byte(out))
 			//log.Println("[SeclambdaMeasure] ENDE: Time for async controller notif: %s", time.Since(start3))
-		} else if event == "SEND" || event == "RESP" {
+		} else if event == "SEND" || event == "RESP" || event == "GETE" {
 			//log.Println("[SeclambdaMeasure] SEND-RESP: Time for Aux processing: %s", time.Since(start))
 			//start1 := time.Now()
-			if present && g.CheckPolicy(ev_id) {
-				//TODO: Change this to a seclambdaFD comm
-				//log.Println("[SeclambdaMeasure] SEND-RESP-present: Time for Policy Check : %s", time.Since(start1))
-				//start2 := time.Now()
+			//FIXME: No need for this //if present && g.CheckPolicy(ev_id) {
+			//TODO: Change this to a seclambdaFD comm
+			//log.Println("[SeclambdaMeasure] SEND-RESP-present: Time for Policy Check : %s", time.Since(start1))
+			//start2 := time.Now()
 
-				//encoder.Encode(ReturnMsg{Allowed: true, MsgID: msg.MsgID})
+			//encoder.Encode(ReturnMsg{Allowed: true, MsgID: msg.MsgID})
 
-				//log.Println("[SeclambdaMeasure] SEND-RESP-present: Time to send to sandbox: %s", time.Since(start2))
-				//msg.RecvChan <- 1
-				//start3 := time.Now()
-				SendToCtr(updater, TYPE_EVENT, ACTION_NOOP, []byte(out))
-				//log.Println("[SeclambdaMeasure] SEND-RESP-present: Time for async controller notif %s", time.Since(start3))
-			} else {
-				//log.Infof("[Seclambda] Event: %v not present or not allowed by policy", ev_id)
-				//TODO: Change this to a seclambdaFD comm
-				//log.Println("[SeclambdaMeasure] SEND-RESP-absent: Time for Policy Check (absent): %s", time.Since(start1))
-				//start2 := time.Now()
+			//log.Println("[SeclambdaMeasure] SEND-RESP-present: Time to send to sandbox: %s", time.Since(start2))
+			//msg.RecvChan <- 1
+			//start3 := time.Now()
+			//log.Println("[Seclambda] Sending event to controller")
+			SendToCtr(updater, TYPE_EVENT, ACTION_NOOP, []byte(out))
+			//log.Println("[SeclambdaMeasure] SEND-RESP-present: Time for async controller notif %s", time.Since(start3))
+			//FIXME: Unecessary if-else } else {
+			//log.Infof("[Seclambda] Event: %v not present or not allowed by policy", ev_id)
+			//TODO: Change this to a seclambdaFD comm
+			//log.Println("[SeclambdaMeasure] SEND-RESP-absent: Time for Policy Check (absent): %s", time.Since(start1))
+			//start2 := time.Now()
 
-				//encoder.Encode(ReturnMsg{Allowed: false, MsgID: msg.MsgID})
+			//encoder.Encode(ReturnMsg{Allowed: false, MsgID: msg.MsgID})
 
-				//s := time.Now()
-				//log.Printf("[Seclambda] Timestamp of replying to  message with ID: %v : %v", msg.MsgID, s.UnixNano())
-				//log.Println("[SeclambdaMeasure] SEND-RESP-absent: Time to send to sandbox: %s", time.Since(start2))
-				//msg.RecvChan <- 0
-				//start3 := time.Now()
-				SendToCtr(updater, TYPE_EVENT, ACTION_NOOP, []byte(out))
-				//log.Println("[SeclambdaMeasure] SEND-RESP-absent: Time for async controller notif: %s", time.Since(start3))
-			}
+			//s := time.Now()
+			//log.Printf("[Seclambda] Timestamp of replying to  message with ID: %v : %v", msg.MsgID, s.UnixNano())
+			//log.Println("[SeclambdaMeasure] SEND-RESP-absent: Time to send to sandbox: %s", time.Since(start2))
+			//msg.RecvChan <- 0
+			//start3 := time.Now()
+			//SendToCtr(updater, TYPE_EVENT, ACTION_NOOP, []byte(out))
+			//log.Println("[SeclambdaMeasure] SEND-RESP-absent: Time for async controller notif: %s", time.Since(start3))
+			//}
 			//replied = true
 		}
 
@@ -544,12 +560,15 @@ func (g *Guard) get_func_name() string {
 
 func (g *Guard) Run(wg *sync.WaitGroup) {
 
-	sandboxFile := os.NewFile(uintptr(g.sandboxSide), "sandbox-fd")
-	dec := gob.NewDecoder(sandboxFile)
-	replyFile := os.NewFile(uintptr(g.seclambdaSide), "seclambdaSide")
-	encoder := gob.NewEncoder(replyFile)
+	g.SandboxFile = os.NewFile(uintptr(g.sandboxSide), "sandbox-fd")
+	bufSandboxFile := bufio.NewReaderSize(g.SandboxFile, 20*1024*1024)
+	dec := gob.NewDecoder(bufSandboxFile)
 
-	defer sandboxFile.Close()
+	g.SeclambdaFile = os.NewFile(uintptr(g.seclambdaSide), "seclambdaSide")
+	//bufReplyFile := bufio.NewWriterSize(replyFile, 20*1024*1024)
+	encoder := gob.NewEncoder(g.SeclambdaFile)
+
+	defer g.SandboxFile.Close()
 
 	var funcMsg KernMsg
 	dec.Decode(&funcMsg)
@@ -566,7 +585,7 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 	}
 
 	id := g.get_func_name() + strconv.FormatInt(get_time(), 10)
-	f, err := os.OpenFile("/data/runsc_log/seclambda."+id, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	f, err := os.OpenFile("/mydata/seclambda_log/seclambda."+id, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
 	}
@@ -658,16 +677,18 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 					//log.Println("[Seclambda] Finish registration; get policy")
 					//ctr <- 1
 					err = encoder.Encode(ReturnMsg{Allowed: true, MsgID: 0, Policy: msg.body})
+					g.SeclambdaFile.Sync()
 				} else {
 					//log.Printf("[Seclambda] Got back policy message: %v", msg)
 					err = encoder.Encode(ReturnMsg{Allowed: true, MsgID: 0, Policy: []byte{}})
+					g.SeclambdaFile.Sync()
 				}
 
 				if err != nil {
 					log.Printf("[Seclambda] Error sending policy")
 				}
 
-				go g.handleSandbox(dec, updater, sandboxExit, sandboxFile, encoder)
+				go g.handleSandbox(dec, updater, sandboxExit, g.SandboxFile, encoder)
 
 			case TYPE_CHECK_RESP:
 				// Assuming that each request is sequential
