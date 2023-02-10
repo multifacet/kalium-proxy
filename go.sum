@@ -4,5 +4,13 @@ github.com/deepaksirone/goczmq v0.0.0-20220915055037-8ac92dfcdada h1:FggyZytywhw
 github.com/deepaksirone/goczmq v0.0.0-20220915055037-8ac92dfcdada/go.mod h1:Da3Q2wZDXSGJfuJlsaia7Jm4fwchieRWsjm3sSk6vmA=
 github.com/deepaksirone/goczmq v0.0.0-20220915062135-de939fdc9e08 h1:Vg3S7Xjuy23e6Q3G9FDvv9Q6urwU2dRWIqEWAev9pDI=
 github.com/deepaksirone/goczmq v0.0.0-20220915062135-de939fdc9e08/go.mod h1:Da3Q2wZDXSGJfuJlsaia7Jm4fwchieRWsjm3sSk6vmA=
+github.com/deepaksirone/goczmq v0.0.0-20230210170857-6e9cd45cbf8d h1:THvstY4jSoCOhQ5bFAEgTG/M45kasHG0PnkHArpBKjU=
+github.com/deepaksirone/goczmq v0.0.0-20230210170857-6e9cd45cbf8d/go.mod h1:Da3Q2wZDXSGJfuJlsaia7Jm4fwchieRWsjm3sSk6vmA=
+github.com/deepaksirone/goczmq v0.0.0-20230210173106-f876d81dacf6 h1:rbU1YkAGn3oQCj3AKEUSLP4dDu92mjC4eTszyPRqqB4=
+github.com/deepaksirone/goczmq v0.0.0-20230210173106-f876d81dacf6/go.mod h1:Da3Q2wZDXSGJfuJlsaia7Jm4fwchieRWsjm3sSk6vmA=
+github.com/deepaksirone/goczmq v0.0.0-20230210175357-0e8d02eedc2c h1:J1je7UQVUEU/s6lc3CJidNjIPijo43Yy1OkPna2uRzs=
+github.com/deepaksirone/goczmq v0.0.0-20230210175357-0e8d02eedc2c/go.mod h1:Da3Q2wZDXSGJfuJlsaia7Jm4fwchieRWsjm3sSk6vmA=
+github.com/deepaksirone/goczmq v0.0.0-20230210181058-d975d3823762 h1:UfoMUub9I//Zu+UZdktRouUx3aHzSvQ1eyLFOzKjhiA=
+github.com/deepaksirone/goczmq v0.0.0-20230210181058-d975d3823762/go.mod h1:Da3Q2wZDXSGJfuJlsaia7Jm4fwchieRWsjm3sSk6vmA=
 github.com/google/subcommands v1.2.0 h1:vWQspBTo2nEqTUFita5/KeEWlUL8kQObDFbub/EN9oE=
 github.com/google/subcommands v1.2.0/go.mod h1:ZjhPrFU+Olkh9WazFPsl27BQ4UPiG37m3yTrtFlrHVk=
