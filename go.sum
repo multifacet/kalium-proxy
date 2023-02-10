@@ -1,0 +1,8 @@
+github.com/deepaksirone/goczmq v0.0.0-20220915050517-28e122dc82fa h1:33Dac93s4IdVBGIK06YVZxcEM+3/R5h2qi9gpb3MX0c=
+github.com/deepaksirone/goczmq v0.0.0-20220915050517-28e122dc82fa/go.mod h1:Da3Q2wZDXSGJfuJlsaia7Jm4fwchieRWsjm3sSk6vmA=
+github.com/deepaksirone/goczmq v0.0.0-20220915055037-8ac92dfcdada h1:FggyZytywhwi5VPj/54DMxctuZel19bnvcnX2/AW9KE=
+github.com/deepaksirone/goczmq v0.0.0-20220915055037-8ac92dfcdada/go.mod h1:Da3Q2wZDXSGJfuJlsaia7Jm4fwchieRWsjm3sSk6vmA=
+github.com/deepaksirone/goczmq v0.0.0-20220915062135-de939fdc9e08 h1:Vg3S7Xjuy23e6Q3G9FDvv9Q6urwU2dRWIqEWAev9pDI=
+github.com/deepaksirone/goczmq v0.0.0-20220915062135-de939fdc9e08/go.mod h1:Da3Q2wZDXSGJfuJlsaia7Jm4fwchieRWsjm3sSk6vmA=
+github.com/google/subcommands v1.2.0 h1:vWQspBTo2nEqTUFita5/KeEWlUL8kQObDFbub/EN9oE=
+github.com/google/subcommands v1.2.0/go.mod h1:ZjhPrFU+Olkh9WazFPsl27BQ4UPiG37m3yTrtFlrHVk=

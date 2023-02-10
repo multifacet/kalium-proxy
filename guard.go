@@ -468,7 +468,7 @@ func (g *Guard) handleSandbox(dec *gob.Decoder, updater *zmq.Channeler,
 		//ev_id, present := g.get_event_id(int64(ev_hash))
 		//log.Println("[SeclambdaMeasure] Time for event check: %s", time.Since(start1))
 		//log.Println("[Seclambda] info[0]: %v, info[1]: %v ev_id: %v, present: %v, msgID: %v", info[0], info[1], ev_id, present, msg.MsgID)
-		/*if event == "GETE" {
+		if event == "GETE" {
 			// TODO: Change this to a seclambdaFD comm
 			// TODO: Make this synchronous
 			//log.Println("[SeclambdaMeasure] GETE: Time for Aux processing: %s", time.Since(start))
@@ -480,16 +480,19 @@ func (g *Guard) handleSandbox(dec *gob.Decoder, updater *zmq.Channeler,
 			//msg.RecvChan <- 1
 			//start2 := time.Now()
 			SendToCtr(updater, TYPE_CHECK_EVENT, ACTION_NOOP, []byte(out))
+			log.Println("[Seclambda] Sent TYPE_CHECK_EVENT to controller")
 			//log.Println("[SeclambdaMeasure] GETE: Time for async controller notif: %s", time.Since(start2))
 			resp := <-checkChannel
 			if resp == 1 {
 				//log.Println("[GETE] Sending Allowed")
-				encoder.Encode(ReturnMsg{Allowed: true, MsgID: msg.MsgID})
+				encoder.Encode(ReturnMsg{Allowed: true, MsgID: msg.MsgID, Policy: []byte{}})
+				//g.SeclambdaFile.Sync()
 			} else {
 				//log.Println("[GETE] Sending disallowed")
-				encoder.Encode(ReturnMsg{Allowed: false, MsgID: msg.MsgID})
+				encoder.Encode(ReturnMsg{Allowed: false, MsgID: msg.MsgID, Policy: []byte{}})
+				//g.SeclambdaFile.Sync()
 			}
-		} else */if event == "ENDE" {
+		} else if event == "ENDE" {
 			//log.Println("[SeclambdaMeasure] ENDE: Time for Aux processing: %s", time.Since(start))
 			//start1 := time.Now()
 			g.PolicyInit()
@@ -561,7 +564,8 @@ func (g *Guard) get_func_name() string {
 func (g *Guard) Run(wg *sync.WaitGroup) {
 
 	g.SandboxFile = os.NewFile(uintptr(g.sandboxSide), "sandbox-fd")
-	bufSandboxFile := bufio.NewReaderSize(g.SandboxFile, 20*1024*1024)
+	bufSandboxFile := bufio.NewReaderSize(g.SandboxFile, 60*1024*1024)
+	//bufSandboxFile := g.SandboxFile
 	dec := gob.NewDecoder(bufSandboxFile)
 
 	g.SeclambdaFile = os.NewFile(uintptr(g.seclambdaSide), "seclambdaSide")
@@ -692,6 +696,7 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 
 			case TYPE_CHECK_RESP:
 				// Assuming that each request is sequential
+				log.Println("Received TYPE_CHECK_RESP message")
 				if msg.body[0] == 0x41 {
 					checkChannel <- 1
 				} else {
@@ -703,6 +708,10 @@ func (g *Guard) Run(wg *sync.WaitGroup) {
 				s := strconv.FormatInt(int64(g.requestNo), 10) + string(":") + strconv.FormatUint(g.runningTime, 10)
 				SendToCtr(updater, TYPE_CHECK_STATUS, ACTION_GD_RESP, []byte(s))
 			case TYPE_TEST:
+
+			//case TYPE_NONE:
+
+			//default:
 
 			}
 

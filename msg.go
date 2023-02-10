@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	TYPE_NONE         byte = 0x00
 	TYPE_TEST         byte = 0x01
 	TYPE_POLICY       byte = 0x02
 	TYPE_INIT         byte = 0x03
