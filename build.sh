@@ -39,6 +39,7 @@ popd
 
 git checkout artifact
 wget https://go.dev/dl/go1.19.linux-amd64.tar.gz
-rm -rf /usr/local/go && tar -C /usr/local -xzf go1.19.linux-amd64.tar.gz
+echo "Grant sudo permission to install go systemwide" 
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.19.linux-amd64.tar.gz
 export PATH=$PATH:/usr/local/go/bin
 go build -o seclambda
