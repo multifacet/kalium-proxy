@@ -4,6 +4,7 @@ set -ex
 
 sudo apt update
 
+#pwd
 #echo "Building lz4"
 #git clone https://github.com/lz4/lz4
 #pushd lz4
@@ -37,9 +38,9 @@ sudo apt update
 #sudo ldconfig
 #popd
 
-git checkout artifact
+#git checkout artifact
 wget https://go.dev/dl/go1.19.linux-amd64.tar.gz
 echo "Grant sudo permission to install go systemwide" 
 sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.19.linux-amd64.tar.gz
 export PATH=$PATH:/usr/local/go/bin
-go build -o seclambda
+go build -buildvcs=false -o seclambda
